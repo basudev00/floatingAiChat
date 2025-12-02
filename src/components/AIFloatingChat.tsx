@@ -13,7 +13,7 @@ const AIFloatingChat = ({ onAddToCart }: EmbeddedAIChatProps) => {
   const [open, setOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // CHECK LOGIN STATUS WHEN CHAT OPENS
+  // ✅ 1. CHECK COOKIE WHEN CHAT OPENS
   useEffect(() => {
     if (open) {
       const token = Cookies.get("access_token");
@@ -22,18 +22,24 @@ const AIFloatingChat = ({ onAddToCart }: EmbeddedAIChatProps) => {
     }
   }, [open]);
 
-  // REAL-TIME LOGIN DETECTION (COOKIE POLLING)
+  // ✅ 2. LISTEN FOR LOGIN FROM IFRAME VIA postMessage
   useEffect(() => {
-    const interval = setInterval(() => {
-      const token = Cookies.get("access_token");
+    const handleMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === "AUTH_SUCCESS" &&
+        typeof event.data?.token === "string"
+      ) {
+        Cookies.set("access_token", event.data.token, {
+          sameSite: "None",
+          secure: true,
+        });
 
-      setIsAuthenticated((prev) => {
-        const isNowAuthenticated = !!token;
-        return prev !== isNowAuthenticated ? isNowAuthenticated : prev;
-      });
-    }, 1000);
+        setIsAuthenticated(true);
+      }
+    };
 
-    return () => clearInterval(interval);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   return (
