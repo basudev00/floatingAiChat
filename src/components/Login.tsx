@@ -5,6 +5,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
+import Cookies from "js-cookie";
 import { verifyOtp, type VerifyLoginPayload } from "../api/auth";
 
 const schema = z.object({
@@ -30,6 +31,24 @@ export default function LoginForm() {
 
     onSuccess: (data) => {
       toast.success(data.detail || "Logged in successfully!");
+
+      // ✅ Save token for same-domain usage
+      if (data.access) {
+        Cookies.set("access_token", data.access, {
+          sameSite: "None",
+          secure: true,
+        });
+
+        // ✅ Send token to parent website (iframe-safe login)
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            token: data.access,
+          },
+          "*"
+        );
+      }
+
       navigate("/");
     },
 
